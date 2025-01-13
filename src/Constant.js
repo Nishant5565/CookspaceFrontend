@@ -1,7 +1,7 @@
 import axios from "axios";
-export const API_URL = 'http://localhost:5000/api/';
+export const API_URL = import.meta.env.VITE_API_URL;
 
-export const ApiKey = "2fc7054d1e1d42febff0b34f2c8024fc"
+export const ApiKey = import.meta.env.VITE_API_KEY
 
 export const RECIPE_API = "https://api.spoonacular.com/recipes/complexSearch?apiKey=" + ApiKey;
 export const fetchApi = async (url, method, data) => {
