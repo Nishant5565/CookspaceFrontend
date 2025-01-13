@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback , useContext} from "react";
 import { fetchApi } from "@/Constant";
 import { Link } from "react-router-dom";
 import { RECIPE_API } from "@/Constant";
@@ -25,6 +25,10 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import {toast} from 'sonner';
+import { MdFavorite } from "react-icons/md";
+import { UserContext } from "@/Contexts/UserContext";
+import { MdFavoriteBorder } from "react-icons/md";
+import { API_URL } from "@/Constant";
 
 const Recipes = () => {
   const [Recipes, setRecipes] = useState([]);
@@ -35,6 +39,8 @@ const Recipes = () => {
   const [searchMode, setSearchMode] = useState("name");
   const [totalResults, setTotalResults] = useState(0);
   const [loading, setLoading] = useState(true);
+  const { user, setUser } = useContext(UserContext);
+  const favourites = user?.favourites;
 
   useEffect(() => {
     const getRecipe = async () => {
@@ -52,6 +58,9 @@ const Recipes = () => {
 
     getRecipe();
   }, [RecipesPerPage, currentPage]);
+
+
+
 
   const searchRecipes = useCallback(
     debounce(async (term, mode, page = 0) => {
@@ -96,6 +105,53 @@ const Recipes = () => {
     setSearchTerm(e.target.value);
   };
 
+  const createFavorite = async (recipeId) => {
+
+
+    if(!user){
+      toast.error("Please login to add recipe to favorites");
+      return;
+    }
+    
+      try {
+        const response = await fetchApi("createFavorite", "POST", {
+          userId: user.id,
+          recipeId,
+        });
+        if (response.status === 200) {
+          toast.success("Recipe added to favorites");
+          setUser((prevUser) => ({
+            ...prevUser,
+            favourites: [...prevUser.favourites, recipeId],
+          }));
+        }
+      }
+      catch (error) {
+        toast.error("Error adding recipe to favorites");
+      }
+    }
+
+    const removeFavorite = async (recipeId) => {
+      try {
+        const response = await fetchApi("removeFavorite", "POST", {
+          userId: user.id,
+          recipeId,
+        });
+        if (response.status === 200) {
+          toast.success("Recipe removed from favorites");
+          setUser((prevUser) => ({
+            ...prevUser,
+            favourites: prevUser.favourites.filter((id) => id !== recipeId),
+          }));
+        }
+      }
+      catch (error) {
+        toast.error("Error removing recipe from favorites");
+      }
+    }
+
+
+
   const totalPage = Math.ceil(totalResults / RecipesPerPage);
   const maxPagesToShow = 5;
   const startPage = Math.max(0, currentPage - Math.floor(maxPagesToShow / 2));
@@ -106,7 +162,7 @@ const Recipes = () => {
   return (
     <div className="container mx-auto md:px-4 px-0 py-8">
       <h1 className="text-3xl font-bold mb-6">Recipes</h1>
-      <div className="mb-4 flex justify-between ">
+      <div className="mb-4 flex justify-between md:flex-row flex-col ">
         <div className="relative">
           <input
             type="text"
@@ -142,6 +198,7 @@ const Recipes = () => {
             </div>
           </div>
         </div>
+        <div className=" translate-y-16">
         <Select onValueChange={(value) => setRecipesPerPage(value)}>
           <SelectTrigger className="border p-2 rounded-lg w-60">
             <SelectValue placeholder="No. of Recipes" />
@@ -155,6 +212,7 @@ const Recipes = () => {
             </SelectGroup>
           </SelectContent>
         </Select>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 justify-center mt-20">
@@ -162,22 +220,40 @@ const Recipes = () => {
           Array.from({ length: RecipesPerPage }).map((_, index) => (
             <div key={index} className="border p-4 rounded-lg md:w-60 w-44">
               <Skeleton className="w-full md:h-48 h-40 object-cover rounded-lg" />
-              <Skeleton className="h-6 mt-4" />
+              <Skeleton className="h-16 mt-4" />
             </div>
           ))
         ) : (
           filteredRecipes.map((pkg) => (
-            <div key={pkg.id} className="border p-4 rounded-lg md:w-60 w-44">
-              <Link to={`/recipes/${pkg.id}`}>
+            <div key={pkg.id} className="border p-4 rounded-lg md:w-60 w-44 relative">
+              <>
+                {
+                  favourites?.includes(pkg.id) ? (
+                    <MdFavorite
+                      className="absolute top-2 right-2 text-red-500 cursor-pointer"
+                      size={24}
+                      onClick={() => removeFavorite(pkg.id)}
+                    />
+                  ) : (
+                    <MdFavoriteBorder
+                      className="absolute top-2 right-2 text-red-500 cursor-pointer"
+                      size={24}
+                      onClick={() => createFavorite(pkg.id)}
+                    />
+                  )
+                }
                 <img
                   src={pkg.image}
                   alt={pkg.title}
                   className="w-full md:h-48 h-40 object-cover rounded-lg"
                 />
+                <Link to={`/recipe/${pkg.id}`}>
                 <h2 className="text-sm text-wrap font-bold mt-4">
                   {pkg?.title}
+                  
                 </h2>
-              </Link>
+                </Link>
+              </>
             </div>
           ))
         )}

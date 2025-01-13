@@ -77,26 +77,26 @@ const AuthForm = ({ mode }) => {
         backgroundSize: "30%",
       }}
     >
-      <div className="flex items-center justify-around w-full h-full"
+      <div className="flex flex-col md:flex-row items-center justify-around w-full h-full"
      style={{transform  : "rotateY(180deg)"}} 
       >
-        <div className=" flex flex-col justify-center items-center mt-20">
+        <div className="flex flex-col justify-center items-center mt-20 md:mt-0">
         <img
           src={Logo}
           alt="Cookscape"
           className="w-36 filter brightness-[10000]"
         />
 
-          <h1 className="text-5xl text-white font-bold text-center" >Welcome to Cookscape
+          <h1 className="text-3xl md:text-5xl text-white font-bold text-center" >Welcome to Cookscape
             <br />
             </h1>
-          <p className="text-white mt-4"> {
+          <p className="text-white mt-4 text-center"> {
               "Explore Cookscapes, Create your own and much more"
             }
           </p>
         </div>
-        <div className="bg-white bg-opacity-10 backdrop-blur-md border border-white border-opacity-30 rounded-2xl px-10 py-8 w-full max-w-md shadow-lg">
-          <h2 className="text-2xl text-start text-white mb-10">
+        <div className="bg-white bg-opacity-10 backdrop-blur-md border border-white border-opacity-30 rounded-2xl px-6 md:px-10 py-8 w-full max-w-md shadow-lg mt-10 md:mt-0">
+          <h2 className="text-xl md:text-2xl text-start text-white mb-10">
             {mode === "signup" ? "Create Account in Cookscape" : "Login to Cookscape"}
           </h2>
           <Formik

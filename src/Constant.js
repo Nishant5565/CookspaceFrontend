@@ -1,6 +1,9 @@
 import axios from "axios";
 export const API_URL = 'http://localhost:5000/api/';
-export const RECIPE_API = "https://api.spoonacular.com/recipes/complexSearch?apiKey=98289306b4724db9a52139c46e3df32b";
+
+export const ApiKey = "a9d409e7c5da49e7997d6fdf89f6d4a6"
+
+export const RECIPE_API = "https://api.spoonacular.com/recipes/complexSearch?apiKey=" + ApiKey;
 export const fetchApi = async (url, method, data) => {
      
      const token = localStorage.getItem('token');

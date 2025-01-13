@@ -1,21 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { fetchApi } from '@/Constant';
-import { Formik, Field, Form, ErrorMessage, FieldArray } from 'formik';
-import * as Yup from 'yup';
-import { IoMdAdd } from 'react-icons/io';
-
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {toast} from 'sonner';
-import { MdDelete } from "react-icons/md";
+import React, { useState, useEffect, useContext } from "react";
+import { Link, useParams } from "react-router-dom";
+import axios from "axios";
+import { IoMdAdd } from "react-icons/io";
+import { MdDelete, MdEdit } from "react-icons/md";
 import {
   Dialog,
   DialogContent,
@@ -24,245 +11,219 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { toast } from "sonner";
+import { ApiKey, fetchApi } from "@/Constant";
+import { MdFavorite } from "react-icons/md";
+import { UserContext } from "@/Contexts/UserContext";
+import { MdFavoriteBorder } from "react-icons/md";
+import { CiStar } from "react-icons/ci";
+import { FaStar, FaStarHalfAlt } from "react-icons/fa";
+
 const SpecificRecipes = () => {
+  const { user, setUser } = useContext(UserContext);
+  const favourites = user?.favourites;
+
   const { id } = useParams();
-  const [specificPackage, setSpecificPackage] = useState(null);
-  const [showBookingForm, setShowBookingForm] = useState(false);
+  const [specificRecipe, setSpecificRecipe] = useState(null);
+
+  const fakeReviews = [
+    {
+      user: "John Doe",
+      rating: 4.5,
+      comment: "Amazing recipe! My family loved it.",
+      date: "2025-01-12",
+    },
+    {
+      user: "Jane Smith",
+      rating: 5,
+      comment: "Perfect for a quick dinner. Highly recommend!",
+      date: "2025-01-10",
+    },
+    {
+      user: "Mike Johnson",
+      rating: 3.5,
+      comment: "Good recipe, but a bit too spicy for my taste.",
+      date: "2025-01-08",
+    },
+  ];
+
+  const createFavorite = async (recipeId) => {
+    try {
+      const response = await fetchApi("createFavorite", "POST", {
+        userId: user.id,
+        recipeId,
+      });
+      if (response.status === 200) {
+        toast.success("Recipe added to favorites");
+        setUser((prevUser) => ({
+          ...prevUser,
+          favourites: [...prevUser.favourites, recipeId],
+        }));
+      }
+    } catch (error) {
+      toast.error("Error adding recipe to favorites");
+    }
+  };
+
+  const removeFavorite = async (recipeId) => {
+    try {
+      const response = await fetchApi("removeFavorite", "POST", {
+        userId: user.id,
+        recipeId,
+      });
+      if (response.status === 200) {
+        toast.success("Recipe removed from favorites");
+        setUser((prevUser) => ({
+          ...prevUser,
+          favourites: prevUser.favourites.filter((id) => id !== recipeId),
+        }));
+      }
+    } catch (error) {
+      toast.error("Error removing recipe from favorites");
+    }
+  };
 
   useEffect(() => {
-    const getPackage = async () => {
-      const response = await fetchApi(`api/packages/${id}`, 'GET');
-      if (response.status === 200) {
-        setSpecificPackage(response.data);
+    const getSpecificRecipe = async () => {
+      try {
+        const response = await axios.get(
+          `https://api.spoonacular.com/recipes/${id}/information?apiKey=`+ApiKey
+        );
+        if (response.status === 200) {
+          setSpecificRecipe(response.data);
+        }
+      } catch (error) {
+        toast.error("Failed to fetch recipe. Please try again.");
       }
     };
-    getPackage();
+
+    getSpecificRecipe();
   }, [id]);
 
-  if (!specificPackage) {
-    return <div className="text-center text-lg font-semibold text-gray-500">Loading...</div>;
+  if (!specificRecipe) {
+    return (
+      <div className="text-center text-lg font-semibold text-gray-500">
+        Loading...
+      </div>
+    );
   }
 
-  const initialValues = {
-    passenger: [{ name: '', gender: '', age: '' }],
-    email: '',
-    phoneNumber: '',
-    travelers: 1,
-    specialRequests: '',
-    packageId: id,
-    selectedDate: '',
-    
-  };
-
-  const validationSchema = Yup.object({
-    passenger: Yup.array().of(
-      Yup.object({
-        name: Yup.string().required('Name is required'),
-        gender: Yup.string().required('Gender is required'),
-        age: Yup.number().required('Age is required').positive('Age must be positive').integer('Age must be an integer'),
-      })
-    ),
-    email: Yup.string().email('Invalid email address').required('Email is required'),
-    phoneNumber: Yup.string().required('Phone number is required'),
-    travelers: Yup.number().min(1, 'Number of travelers must be at least 1').required('Number of travelers is required'),
-    specialRequests: Yup.string(),
-    selectedDate: Yup.string().required('Please select a date'),
-  });
-
-  const handleSubmit = async (values, { setSubmitting }) => {
-    const response = await fetchApi('api/bookings', 'POST', values);
-    if (response.status === 201) {
-      toast.success('Booked successfully', {description: 'Your booking has been created successfully'});
-      setShowBookingForm(false);
-    } else {
-      toast.error('Error creating booking', {description: response.data.message});
-    }
-    setSubmitting(false);
-  };
+  const {
+    title,
+    image,
+    readyInMinutes,
+    servings,
+    summary,
+    extendedIngredients,
+    instructions,
+  } = specificRecipe;
 
   return (
-    <div className="max-w-4xl mx-auto p-8 bg-white shadow-lg rounded-lg space-y-8">
-      <div className="relative mb-6">
-        <img
-          src={specificPackage.image}
-          alt={specificPackage.title}
-          className="w-full h-64 object-cover rounded-lg"
-        />
-        <div className="absolute top-4 left-4 bg-gray-900 bg-opacity-70 text-white px-4 py-1 rounded-md text-sm">
-          ₹{specificPackage.price}
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        <h1 className="text-4xl font-extrabold text-gray-800">{specificPackage.title}</h1>
-        <p className="text-lg text-gray-700 leading-relaxed">{specificPackage.description}</p>
-      </div>
-
-      <div className="mt-6">
-        <h2 className="text-xl font-semibold text-gray-800 mb-3">Available Dates</h2>
-        <div className="flex flex-wrap gap-4">
-          {specificPackage.availableDates.map((date, index) => (
-            <span
-              key={index}
-              className="bg-green-100 text-green-800 px-4 py-2 rounded-lg text-sm font-medium"
-            >
-              {new Date(date).toLocaleDateString()}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      <div className="mt-8 text-center">
-        <button
-          className="bg-blue-600 text-white py-3 px-6 rounded-lg shadow hover:bg-blue-700 transition"
-          onClick={() => setShowBookingForm(!showBookingForm)}
-        >
-          Start Booking
-        </button>
-      </div>
-
-      {showBookingForm && (
-        <div className="mt-8">
-          <Formik
-            initialValues={initialValues}
-            validationSchema={validationSchema}
-            onSubmit={handleSubmit}
-          >
-            {({ values, setFieldValue, isSubmitting }) => (
-              <Form className="space-y-4">
-                <FieldArray name="passenger">
-                  {({ push, remove }) => (
-                    <div className="space-y-4">
-                      {values.passenger.map((_, index) => (
-                        <div key={index} className=" flex justify-between relative">
-                          <div>
-                          <Field
-                            name={`passenger[${index}].name`}
-                            type="text"
-                            placeholder="Name"
-                            className="border border-gray-300 p-2 rounded-lg w-full"
-                          />
-                          <ErrorMessage name={`passenger[${index}].name`} component="div" className="text-red-500 text-sm" />
-                          </div>
-                          <div>
-                          <Field name={`passenger[${index}].gender`}>
-                            {({ field }) => (
-                              <Select {...field} onValueChange={(value) => setFieldValue(`passenger[${index}].gender`, value)}>
-                                <SelectTrigger className="border border-gray-300 p-2 rounded-lg w-full">
-                                  <SelectValue placeholder="Select gender" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectGroup>
-                                    <SelectItem value="male">Male</SelectItem>
-                                    <SelectItem value="female">Female</SelectItem>
-                                    <SelectItem value="other">Other</SelectItem>
-                                  </SelectGroup>
-                                </SelectContent>
-                              </Select>
-                            )}
-                          </Field>
-                          <ErrorMessage name={`passenger[${index}].gender`} component="div" className="text-red-500 text-sm" />
-                          </div>
-                          <div>
-                          <Field
-                            name={`passenger[${index}].age`}
-                            type="number"
-                            placeholder="Age"
-                            className="border border-gray-300 p-2 rounded-lg w-full"
-                          />
-                          <ErrorMessage name={`passenger[${index}].age`} component="div" className="text-red-500 text-sm" />
-                          </div>
-                          {index > 0 && (
-                            <button type="button" onClick={() => {
-                              remove(index);
-                              setFieldValue('travelers', values.passenger.length - 1);
-                            }} className="text-red-500 absolute -right-5 top-1/2 transform -translate-y-1/2">
-                              <MdDelete size={20} />
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                      <button type="button" onClick={() => {
-                        push({ name: '', gender: '', age: '' });
-                        setFieldValue('travelers', values.passenger.length + 1);
-                      }} className=" flex items-center gap-2 bg-teal-800 text-white px-2 py-1 rounded-lg">
-                        Add More <IoMdAdd />
-                      </button>
-                    </div>
-                  )}
-                </FieldArray>
-                <div className=' flex  items-center gap-10 pb-4'>
-                <div className="">
-                  <Field
-                    name="email"
-                    type="email"
-                    placeholder="Email"
-                    className="border border-gray-300 p-2 rounded-lg w-96"
-                  />
-                  <ErrorMessage name="email" component="div" className="text-red-500 absolute text-sm" />
-                </div>
-                <div className="">
-                  <Field
-                    name="phoneNumber"
-                    type="text"
-                    maxLength="10"
-                    placeholder="Phone Number"
-                    className="border border-gray-300 p-2 rounded-lg w-full"
-                  />
-                  <ErrorMessage name="phoneNumber" component="div" className="text-red-500 absolute text-sm" />
-                </div>
-                <div className="">
-                  <Field name="selectedDate">
-                    {({ field }) => (
-                      <Select {...field} onValueChange={(value) => setFieldValue('selectedDate', value)}>
-                        <SelectTrigger className="border border-gray-300 rounded-lg w-full">
-                          <SelectValue placeholder="Select a date" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            {specificPackage.availableDates.map((date, index) => (
-                              <SelectItem key={index} value={date}>
-                                {new Date(date).toLocaleDateString()}
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
-                    )}
-                  </Field>
-                  <ErrorMessage name="selectedDate" component="div" className="text-red-500 absolute text-sm" />
-                </div>
-                </div>
-                <div className="space-y-2">
-                  <Field
-                    name="specialRequests"
-                    as="textarea"
-                    placeholder="Special Requests"
-                    className="border border-gray-300 p-2 rounded-lg w-full"
-                  />
-                  <ErrorMessage name="specialRequests" component="div" className="text-red-500 text-sm" />
-                </div>
-   
-              <div className=' flex justify-between items-center'>
-
-
-
-              <button
-                  type="submit"
-                  className="bg-green-600 text-white py-3 px-6 rounded-lg shadow hover:bg-green-700 transition"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? 'Booking...' : 'Confirm Booking'}
-                </button>
-                <div>
-                  Total Price: ₹{specificPackage.price * values.travelers}
-                </div>
-              </div>
-              </Form>
+    <div className="flex justify-center">
+      <div className="max-w-4xl p-6 bg-gradient-to-r from-white to-gray-100 shadow-xl rounded-3xl space-y-8 relative">
+        {user ? (
+          <div className="flex absolute right-2">
+            {favourites.includes(parseInt(id)) ? (
+              <MdFavorite
+                title="Remove from favorites"
+                className="text-red-500 text-2xl cursor-pointer"
+                onClick={() => removeFavorite(id)}
+              />
+            ) : (
+              <MdFavoriteBorder
+                title="Add to favorites"
+                className="text-red-500 text-2xl cursor-pointer"
+                onClick={() => createFavorite(id)}
+              />
             )}
-          </Formik>
+          </div>
+        ) : (
+          <Link to="/login" className="absolute right-2">
+            <MdFavoriteBorder
+              title="Add to favorites"
+              className="text-red-500 text-2xl cursor-pointer"
+            />
+          </Link>
+        )}
+
+        <div className="flex flex-col items-center space-y-6">
+          <img
+            src={image}
+            alt={title}
+            className="rounded-2xl shadow-md max-h-80 w-full object-cover"
+          />
+          <h1 className="text-4xl font-bold text-gray-900 text-center">
+            {title}
+          </h1>
+          <div className="text-gray-700 space-y-1 text-center">
+            <p>
+              <span className="font-medium">⏱ Ready in:</span> {readyInMinutes}{" "}
+              minutes
+            </p>
+            <p>
+              <span className="font-medium">🍴 Servings:</span> {servings}
+            </p>
+          </div>
+          <p
+            className="text-gray-600 text-sm leading-relaxed"
+            dangerouslySetInnerHTML={{ __html: summary }}
+          ></p>
         </div>
-      )}
+
+        <div className="space-y-6">
+          <h2 className="text-3xl font-semibold text-gray-800">🛒 Ingredients</h2>
+          <ul className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {extendedIngredients.map((ingredient) => (
+              <li
+                key={ingredient.id}
+                className="bg-gray-50 rounded-lg shadow-md p-4 text-gray-700 text-sm font-medium"
+              >
+                {ingredient.original}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="space-y-6">
+          <h2 className="text-3xl font-semibold text-gray-800">
+            📋 Instructions
+          </h2>
+          <ol className="list-decimal pl-5 space-y-4 text-gray-700 text-sm leading-relaxed">
+            {instructions ? (
+              <span dangerouslySetInnerHTML={{ __html: instructions }} />
+            ) : (
+              "No instructions available."
+            )}
+          </ol>
+        </div>
+
+        <div className="space-y-6">
+          <h2 className="text-3xl font-semibold text-gray-800">⭐ Reviews</h2>
+          <div className="space-y-4">
+            {fakeReviews.map((review, index) => (
+              <div
+                key={index}
+                className="bg-gray-50 rounded-lg shadow-md p-4 space-y-2"
+              >
+                <div className="flex items-center space-x-2">
+                  {Array.from({ length: Math.floor(review.rating) }, (_, i) => (
+                    <FaStar key={i} className="text-yellow-500 text-lg" />
+                  ))}
+                  {review.rating % 1 !== 0 && (
+                    <FaStarHalfAlt className="text-yellow-500 text-lg" />
+                  )}
+                  <span className="text-gray-600 text-sm ml-2">
+                    {review.rating}/5
+                  </span>
+                </div>
+                <p className="text-gray-700">{review.comment}</p>
+                <p className="text-gray-500 text-xs">- {review.user}</p>
+                <p className="text-gray-400 text-xs">{review.date}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

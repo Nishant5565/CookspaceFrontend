@@ -48,6 +48,7 @@
 body::-webkit-scrollbar {
   width: 2px; 
  display: none;
+ overflow-x: hidden;
 }
 
 ::-webkit-scrollbar-thumb {
